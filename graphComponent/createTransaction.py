@@ -37,6 +37,6 @@ df3 = df2.withColumn("timestamp", F.regexp_replace('timestamp', 'T', '-'))
 # Creates a temporary view using the DataFrame
 df3.createOrReplaceTempView("transaction")
 
-results = spark.sql("select timestamp as Date, count(tx_hash) as num_tx, mean(tx_value) as mean_tx_value from transaction group by timestamp")
+results = spark.sql("select timestamp as Date, count(tx_hash) as num_tx, mean(tx_value) as mean_tx_value, max(tx_value) as max_tx_value, min(tx_value) as min_tx_value from transaction group by timestamp")
 
 results.write.option("header", "true").mode("overwrite").csv("transaction_info.csv")

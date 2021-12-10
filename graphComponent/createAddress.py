@@ -43,6 +43,19 @@ df3 = df2.withColumn("time", F.regexp_replace('time', 'T', '-'))
 # Creates a temporary view using the DataFrame
 df3.createOrReplaceTempView("address")
 
+
+#something new
+dfwithalladress = spark.sql("(select time, payer_address as person from address) union (select time, payee_address as person from address)")
+#dfwithalladress.show()
+dfwithalladress.createOrReplaceTempView("allperson")
+
+dfoldtime = spark.sql("select min(time) as time, person from allperson group by person")
+#dfoldtime.show()
+dfoldtime.createOrReplaceTempView("tableWithOldTime")
+dfnewaddress = spark.sql("select time, count(person) as newAddress from tableWithOldTime group by time")
+dfnewaddress.createOrReplaceTempView("newaddress")
+#dfnewaddress.show()
+
 unique_time = spark.sql("select distinct time from address")
 unique_time.show()
 time_list = unique_time.select(F.collect_set('time').alias('time')).first()['time'] 
@@ -67,4 +80,17 @@ for each_time_frame in time_list:
 
 df = pd.DataFrame(time_degree_dict.items(), columns=['Date', 'mean_degree'])
 
-df.to_csv("mean_degree.csv", index=False)
+value = df.values.tolist()
+
+column = list(df.columns)
+
+spark_df = spark.createDataFrame(value,column)
+
+spark_df.createOrReplaceTempView("meanDegree")
+
+results = spark.sql("select Date, mean_degree, newAddress from meanDegree left join newaddress on meanDegree.Date = newaddress.time").toPandas()
+
+#print(type(results))
+#print(results)
+results.to_csv("mean_degree.csv", index=False)
+#results.write.option("header", "true").mode("overwrite").csv("mean_degree.csv")
