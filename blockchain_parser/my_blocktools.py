@@ -27,13 +27,16 @@ def my_hash32(stream):
     tmp = bytes.fromhex(str(stream.read(64).decode("utf-8")))
     return tmp[::-1]
 
+
 def my_read(stream, size):
     true_size = 2*size
-    # print("true size is: {}".format(true_size))
-    # exit(651)
     tmp = bytes.fromhex(str(stream.read(true_size).decode("utf-8")))
     return tmp
 
+
+def my_read_true_size(stream, true_size):
+    tmp = bytes.fromhex(str(stream.read(true_size).decode("utf-8")))
+    return tmp
 
 
 def my_varint(stream):
@@ -88,7 +91,7 @@ def double_sha256(bytebuffer):
   return hashlib.sha256(hashlib.sha256(bytebuffer).digest()).digest()
 
 if __name__ == "__main__":
-
+    pass
     # test_size = 30
     #
     # with open("1M.dat", "rb") as f:
@@ -112,6 +115,30 @@ if __name__ == "__main__":
     # test_pubkey = bytes.fromhex("76a9146949cc8b69a0af5b5d9849f2b1a4b2960e91a91688ac")
     # print(rawpk2addr(test_pubkey))
 
-    pass
+    # with open("blk710793.dat", "rb") as f:
+    #     # e = my_read(f, 0)
+    #     a = my_read(f, 2)
+    #     b = my_read(f, 2)
+    #     c = my_read(f, 2)
+    #     # a = f.read(4)
+    #     # b = f.read(2)
+    #     # c = bytes.fromhex(str(f.read(2).decode("utf-8")))
+    #     # print(e)
+    #     print(a)
+    #     print(b)
+    #     print(c)
+    #     # print(c == b'\x20')
+    #     # print(c == b' ')
+    #     d = b''.join([a, b, c])
+    #     print(d)
+        #
+        # print(d == b'\04\x00\x00\x20')
+
+        # print(my_read(f, 2))
+
+        # print(bool(0))
+        # print(bool(1))
+        # print(bool(2))
+
 
 

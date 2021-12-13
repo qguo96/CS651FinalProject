@@ -34,14 +34,13 @@ class my_Block:
             self.Txs.append(tx)
 
     def toString(self):
-        pass
         # print("")
         # print("#"*10 + " Block Header " + "#"*10)
         # self.blockHeader.toString()
         # print("")
-        # print("##### Tx Count: %d" % self.txCount)
-        # for t in self.Txs:
-        #     t.toString()
+        print("##### Tx Count: %d" % self.txCount)
+        for t in self.Txs:
+            t.toString()
         # print("#### end of all %d transactins" % self.txCount)
 
     def toMemory(self):
@@ -74,28 +73,62 @@ class my_Block:
 
 class my_Tx:
     def __init__(self, blockchain):
+        # starting index
         self.pos_start = blockchain.tell()
 
+        # version
         self.version = my_uint4(blockchain)
+
+        # deal with potential marker for witness
+        self.wit_marker_start_pos = blockchain.tell()
+        self.marker = my_uint1(blockchain)
+        # this block follows bip-0144 protocol if and only if:
+        # self.marker == \x00 => ord(self.marker) == 0 => bool(ord(self.marker)) == false
+        self.follow_bip_0144 = not bool(self.marker)
+        if self.follow_bip_0144:
+            self.flag = my_uint1(blockchain)
+        else:
+            blockchain.seek(self.wit_marker_start_pos)
+        self.bip0144_end_pos = blockchain.tell()
+
+        # tx_ins
         self.inCount = my_varint(blockchain)
         self.inputs = []
         for i in range(0, self.inCount):
             input = my_txInput(blockchain)
             self.inputs.append(input)
+
+        # tx_outs
         self.outCount = my_varint(blockchain)
         self.outputs = []
         if self.outCount > 0:
             for i in range(0, self.outCount):
                 output = my_txOutput(blockchain)
                 self.outputs.append(output)
+
+        # witnesses, one for each tx_in
+        self.witness_start_pos = blockchain.tell()
+        if self.follow_bip_0144:
+            for i in range(0, self.inCount):
+                self.inputs[i].witness = my_TxInWitness(blockchain)
+        self.hh_witness_end_pos = blockchain.tell()
+
+        # lock time
         self.lockTime = my_uint4(blockchain)
 
+        # ending index
         self.pos_end = blockchain.tell()
+
+        # calculate tx hash
         blockchain.seek(self.pos_start)
-        self.hash = double_sha256(my_read(blockchain, (self.pos_end-self.pos_start)//2))[::-1]
+        self.hash_comp_1 = my_read_true_size(blockchain, (self.wit_marker_start_pos-self.pos_start))
+        _ = my_read_true_size(blockchain, (self.bip0144_end_pos-self.wit_marker_start_pos))
+        self.hash_comp_2 = my_read_true_size(blockchain, (self.witness_start_pos-self.bip0144_end_pos))
+        _ = my_read_true_size(blockchain, (self.hh_witness_end_pos - self.witness_start_pos))
+        self.hash_comp_3 = my_read_true_size(blockchain, (self.pos_end - self.hh_witness_end_pos))
+        self.hash = double_sha256(b''.join([self.hash_comp_1, self.hash_comp_2, self.hash_comp_3]))[::-1]
 
     def toString(self):
-        pass
         # print("")
         # print("="*20 + " No. %s " %self.seq + "Transaction " + "="*20)
         # print("Tx Version:\t %d" % self.version)
@@ -108,7 +141,7 @@ class my_Tx:
         #     o.toString()
         # print("Lock Time:\t %d" % self.lockTime)
 
-        # print("self.hash is: {}".format(hashStr(self.hash)))
+        print("self.hash is: {}".format(hashStr(self.hash)))
         # exit(651)
 
 
@@ -117,6 +150,7 @@ class my_txInput:
         self.prevhash = my_hash32(blockchain)
         self.txOutId = my_uint4(blockchain)
         self.scriptLen = my_varint(blockchain)
+        self.witness = ""
 
         # normal read will give error, use my_read instead
         # self.scriptSig = blockchain.read(self.scriptLen)
@@ -151,5 +185,18 @@ class my_txOutput:
         # print("output addr is: %s" % rawpk2addr(self.pubkey))
         # exit(651)
 
+
+class my_TxInWitness:
+    def __init__(self, blockchain):
+        self.num_wit_stack_items = my_varint(blockchain)
+        self.witStackItems = []
+        for i in range(0, self.num_wit_stack_items):
+            wit_stack_item = my_WitStackItem(blockchain)
+            self.witStackItems.append(wit_stack_item)
+
+class my_WitStackItem:
+    def __init__(self, blockchain):
+        self.wit_len = my_varint(blockchain)
+        self.wit_data = my_read(blockchain, self.wit_len)
 
 

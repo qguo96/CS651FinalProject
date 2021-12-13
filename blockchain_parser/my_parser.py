@@ -3,6 +3,7 @@
 import findspark
 findspark.init("/Users/yifanzhang/server/spark-3.2.0-bin-hadoop3.2")
 from pyspark import SparkConf, SparkContext
+from pyspark import StorageLevel
 from my_block import *
 import shutil
 
@@ -14,7 +15,10 @@ if os.path.exists(output_folder):
     shutil.rmtree(output_folder)
 os.makedirs(output_folder)
 
-def parse(blockchain):
+def parse(blockchain, blockname):
+    print("")
+    print("parsing: {}".format(blockname))
+    print("")
     block = my_Block(blockchain)
     return block.toMemory()
 
@@ -49,7 +53,7 @@ def main():
     sc = SparkContext(conf=conf)
 
     rawfiles = sc.parallelize([sys.argv[i] for i in range(1, len(sys.argv))])
-    blocks = rawfiles.map(lambda filename: parse(open(filename, "rb"))).cache()
+    blocks = rawfiles.map(lambda filename: parse(open(filename, "rb"), filename)).persist(StorageLevel.MEMORY_AND_DISK)
 
     # key: (prev_out_txhash, prev_out_index)
     # value: (tx_hash, input_index, tx_time)
